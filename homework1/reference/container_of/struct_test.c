@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include <stddef.h>
+#include <stdio.h>
 
 /*
 Execute command: gcc struct_test.c -o struct_test && ./struct_test
@@ -13,7 +13,8 @@ struct data {
 };
 ```
 
-When only define this, it will display wrong value, because `structure padding` will alloc more memory for variable, ex: char will allocate 4 bytes spaces.
+When only define this, it will display wrong value, because `structure padding`
+will alloc more memory for variable, ex: char will allocate 4 bytes spaces.
 
 Reference: https://hackmd.io/@sysprog/c-memory
 */
@@ -40,7 +41,8 @@ struct data {
     double c;
 };
 
-int main() {
+int main()
+{
     struct data x = {.a = 25, .b = 'A', .c = 12.45};
     char *p = (char *) &x;
     printf("a=%d\n", *((short *) p));
