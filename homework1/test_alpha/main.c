@@ -265,8 +265,10 @@ void st_remove(struct st_node **root, struct st_node *del)
         if (del == *root)
             *root = least;
 
-        AAAA;
-        BBBB;
+        // TODO: AAAA;
+        st_replace_right(del, least);
+        // TODO: BBBB;
+        st_update(root, least);
         return;
     }
 
@@ -275,8 +277,10 @@ void st_remove(struct st_node **root, struct st_node *del)
         if (del == *root)
             *root = most;
 
-        CCCC;
-        DDDD;
+        // TODO: CCCC;
+        st_replace_left(del, most);
+        // TODO: DDDD;
+        st_update(root, most);
         return;
     }
 
@@ -293,7 +297,8 @@ void st_remove(struct st_node **root, struct st_node *del)
     else
         st_right(parent) = 0;
 
-    EEEE;
+    // TODO: EEEE;
+    return;
 }
 
 /* Test program */
@@ -316,6 +321,9 @@ struct treeint {
 
 static struct st_root *tree;
 
+/*
+    初始化 tree 內容
+*/
 int treeint_init()
 {
     tree = calloc(sizeof(struct st_root), 1);
@@ -323,6 +331,9 @@ int treeint_init()
     return 0;
 }
 
+/*
+    將 n 的節點依序先左後右，存在時清除節點
+*/
 static void __treeint_destroy(struct st_node *n)
 {
     if (st_left(n))
@@ -335,6 +346,9 @@ static void __treeint_destroy(struct st_node *n)
     free(i);
 }
 
+/*
+    從 root 開始清除所有節點
+*/
 int treeint_destroy()
 {
     assert(tree);
@@ -345,6 +359,18 @@ int treeint_destroy()
     return 0;
 }
 
+/*
+    從 root 開始查詢，有以下 3 種情境：
+        1. 當 insert value: a 已經在 tree 中時返回該節點
+        2. 當 a < t->value，改找 left 節點
+        3. 當 a > t->value，改找 right 節點
+    直到沒有下一個節點為止，並且 d 會存儲 a 與 t->value 的關係，當 a < t->value
+    時 d 為 LEFT，當 a > t->value 時 d 為 RIGHT;
+    接著建立新節點，有以下 2 種情境：
+        1. 當目前還沒有任何節點時，將 tree 的 root 指向新節點
+        2. 或是將新節點根據 d 值插入到 p (前一個節點) 的 LEFT / RIGHT
+    返回新節點
+*/
 struct treeint *treeint_insert(int a)
 {
     struct st_node *p = NULL;
@@ -375,6 +401,13 @@ struct treeint *treeint_insert(int a)
     return i;
 }
 
+/*
+    從 root 開始查詢，有以下 3 種情境：
+        1. 當 insert value: a 已經在 tree 中時返回該節點
+        2. 當 a < t->value，改找 left 節點
+        3. 當 a > t->value，改找 right 節點
+    直到沒有下一個節點為止，沒有找到時返回 0;
+*/
 struct treeint *treeint_find(int a)
 {
     struct st_node *n = st_root(tree);
@@ -392,6 +425,9 @@ struct treeint *treeint_find(int a)
     return 0;
 }
 
+/*
+    先透過 a 查詢節點，當節點不存在時返回 -1，存在時從 tree 中移除節點
+*/
 int treeint_remove(int a)
 {
     struct treeint *n = treeint_find(a);
@@ -404,17 +440,23 @@ int treeint_remove(int a)
 }
 
 /* ascending order */
+/*
+    將 tree 的內容都顯示出來，因為是 ASC
+   的方式，因此從最小開始顯示，先顯示左節點再顯示右節點
+*/
 static void __treeint_dump(struct st_node *n, int depth)
 {
     if (!n)
         return;
 
-    __treeint_dump(FFFF, depth + 1);
+    // TODO: __treeint_dump(FFFF, depth + 1);
+    __treeint_dump(st_left(n), depth + 1);
 
     struct treeint *v = treeint_entry(n);
     printf("%d\n", v->value);
 
-    __treeint_dump(GGGG, depth + 1);
+    // TODO: __treeint_dump(GGGG, depth + 1);
+    __treeint_dump(st_right(n), depth + 1);
 }
 
 void treeint_dump()
