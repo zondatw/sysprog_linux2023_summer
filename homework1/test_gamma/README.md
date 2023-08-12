@@ -15,7 +15,7 @@
 研讀 專題: lib/sort.c，提出上述程式碼效能改進之規劃並予以實作
 ```
 
-### Questions 1: (解釋上述程式碼運作原理)
+### Question 1: (解釋上述程式碼運作原理)
 
 med3：
 ```
@@ -69,7 +69,7 @@ allocate_thread:
 
 
 
-### Questions 2: (以 Thread Sanitizer 找出上述程式碼的 data race 並著手修正)
+### Question 2: (以 Thread Sanitizer 找出上述程式碼的 data race 並著手修正)
 
 ref: [ThreadSanitizerCppManual](https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual)
 

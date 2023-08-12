@@ -13,7 +13,7 @@
 在 Linux 核心原始程式碼找出類似 align_up 的程式碼，並舉例說明其用法
 ```
 
-### Questions 1: (說明上述程式碼的運作原理)
+### Question 1: (說明上述程式碼的運作原理)
 
 `(((sz + mask) / alignment) * alignment)`
 
@@ -24,7 +24,7 @@ MMMM = `(sz & (~mask)) + ((sz & mask) != 0) * (mask + 1);`
 `(sz & (~mask))` 為去掉遮罩部份的值，以取得地板值; `(sz & mask) != 0)` 是為了判斷遮罩部份有沒有值，如果有將他乘上 `(mask + 1)` = alignment，結果只會有 0 / alignment;
 這段前提需要 `if ((alignment & mask) == 0) {  /* power of two? */` 的判斷，因為前述的 mask 應用是以 2 進制方式去發想。
 
-### Questions 2: (在 Linux 核心原始程式碼找出類似 align_up 的程式碼，並舉例說明其用法)
+### Question 2: (在 Linux 核心原始程式碼找出類似 align_up 的程式碼，並舉例說明其用法)
 
 從 [include/linux/align.h](https://elixir.bootlin.com/linux/v6.4.8/source/include/linux/align.h#L8) 找到  
 ```c
