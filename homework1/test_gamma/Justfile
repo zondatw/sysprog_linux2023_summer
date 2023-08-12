@@ -1,0 +1,31 @@
+
+source_code := "qsort_mt.c"
+exe := "qsort"
+
+@build:
+    gcc -Wall -o {{exe}} {{source_code}} -lpthread
+
+@thread-sanitizer:
+    clang {{source_code}} -fsanitize=thread -fPIE -pie -g -o {{exe}}
+    ./{{exe}}
+
+@clean:
+    rm -f {{exe}}
+    rm -f perf.data*
+
+# --------
+#   perf
+# ref: https://www.brendangregg.com/perf.html
+# --------
+
+@perf-annotate:
+    perf annotate
+
+@perf-report:
+    perf report
+
+@perf-record:
+    perf record ./{{exe}}
+
+@perf-stat:
+    perf stat ./{{exe}}

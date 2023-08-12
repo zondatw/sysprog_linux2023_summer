@@ -1,0 +1,27 @@
+
+source_code := "main.c"
+exe := "main"
+
+@build:
+    gcc -o {{exe}} {{source_code}}
+
+@clean:
+    rm -f {{exe}}
+    rm -f perf.data*
+
+# --------
+#   perf
+# ref: https://www.brendangregg.com/perf.html
+# --------
+
+@perf-annotate:
+    perf annotate
+
+@perf-report:
+    perf report
+
+@perf-record:
+    perf record ./{{exe}}
+
+@perf-stat:
+    perf stat ./{{exe}}

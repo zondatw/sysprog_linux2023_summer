@@ -1,3 +1,7 @@
 # execute file
 main
-qsort_mt
+qsort
+a.out
+
+# perf
+perf.data*
