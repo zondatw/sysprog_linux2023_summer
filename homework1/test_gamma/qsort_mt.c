@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
@@ -246,10 +247,11 @@ top:
                 swap(pl, pl - es);
         return;
     }
+    // 取中間值
     pm = (char *) a + (n / 2) * es;
     if (n > 7) {
-        pl = (char *) a;
-        pn = (char *) a + (n - 1) * es;
+        pl = (char *) a;                 // 最左邊的位置
+        pn = (char *) a + (n - 1) * es;  // 最右邊的值
         if (n > 40) {
             d = (n / 8) * es;
             pl = med3(pl, pl + d, pl + 2 * d, cmp, thunk);
@@ -258,11 +260,18 @@ top:
         }
         pm = med3(pl, pm, pn, cmp, thunk);
     }
-    swap(a, pm);
-    pa = pb = (char *) a + es;
+    swap(a, pm);  // 將中間值和最左邊的值交換
+    pa = pb =
+        (char *) a +
+        es;  // 設定左往右找值的 index和最左邊基底 index，初始值為第二個位置
 
-    pc = pd = (char *) a + (n - 1) * es;
+    pc = pd = (char *) a + (n - 1) * es;  // 設定右往左找值的 index和最右邊基底
+                                          // index，初始值為最後一個位置
     for (;;) {
+        // 從左往右找值，找到大於 a
+        // 的值時跳出迴圈，或皆小於等於則跑到等於（右往左）的 index 時結束迴圈
+        // 掃描過程中，如果有掃到跟 a 相等的值時，往最左邊放，並把最左邊基底
+        // index 加一
         while (pb <= pc && (r = CMP(thunk, pb, a)) <= 0) {
             if (r == 0) {
                 swap_cnt = 1;
@@ -271,6 +280,10 @@ top:
             }
             pb += es;
         }
+        // 從右往左找值，找到小於 a
+        // 的值時跳出迴圈，或皆大於等於則跑到等於（左往右）的 index 時結束迴圈
+        // 掃描過程中，如果有掃到跟 a 相等的值時，往最右放，並把最右邊基底 index
+        // 減一
         while (pb <= pc && (r = CMP(thunk, pc, a)) >= 0) {
             if (r == 0) {
                 swap_cnt = 1;
@@ -279,14 +292,21 @@ top:
             }
             pc -= es;
         }
+        // 如果 （左往右）的 index 大於 (右往左）的 index，結束程式
         if (pb > pc)
             break;
+        // 交換兩邊的值
         swap(pb, pc);
         swap_cnt = 1;
+
+        // (右往左）的 index 剪一
+        // （左往右）的 index 加一
         pb += es;
         pc -= es;
     }
 
+    // 以 （左往右）的 index 和 (右往左） index 的交會處，將 a
+    // 值該位置放，算是將基準中放到比較中間的位置
     pn = (char *) a + n * es;
     r = min(pa - (char *) a, pb - pa);
     vecswap(a, pb - r, r);
@@ -306,6 +326,7 @@ top:
     }
 
 nevermind:
+    // 計算左右 block size
     nl = (pb - pa) / es;
     nr = (pd - pc) / es;
 
