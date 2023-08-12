@@ -298,7 +298,7 @@ void st_remove(struct st_node **root, struct st_node *del)
         st_right(parent) = 0;
 
     // TODO: EEEE;
-    return;
+    st_update(root, parent);
 }
 
 /* Test program */
