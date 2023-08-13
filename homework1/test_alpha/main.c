@@ -307,6 +307,8 @@ void st_remove(struct st_node **root, struct st_node *del)
 #include <stddef.h> /* offsetof */
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/resource.h>
+#include <sys/time.h>
 #include <time.h>
 
 #define container_of(ptr, type, member) \
@@ -464,32 +466,63 @@ void treeint_dump()
     __treeint_dump(st_root(tree), 0);
 }
 
+#define interval(title, block)                                         \
+    do {                                                               \
+        clock_t start_insert = clock();                                \
+        block;                                                         \
+        clock_t end_insert = clock();                                  \
+        printf("%s: %f seconds\n", title,                              \
+               (double) (end_insert - start_insert) / CLOCKS_PER_SEC); \
+    } while (0);
+
 int main()
 {
+    struct timeval start, end;
+    struct rusage ru;
     srand(time(0));
+    struct treeint treelist[2];
+    printf("struct size: %ldB\n", sizeof(treelist[0]));
+    printf("struct size: %x - %x = %ldB\n", &treelist[1], &treelist[0],
+           (long) &treelist[1] - (long) &treelist[0]);
 
+    int node_num = 1000000;
+
+    getrusage(RUSAGE_SELF, &ru);
+    printf("%s: %ldK\n", "ru_maxrss", ru.ru_maxrss);
+    gettimeofday(&start, NULL);
     treeint_init();
 
-    for (int i = 0; i < 100; ++i)
-        treeint_insert(rand() % 99);
+    for (int i = 0; i < node_num; ++i) {
+        int v = rand() % node_num;
+        interval("Insertion Time", treeint_insert(v));
+    }
 
     printf("[ After insertions ]\n");
     treeint_dump();
 
-    printf("Removing...\n");
-    for (int i = 0; i < 100; ++i) {
-        int v = rand() % 99;
-        printf("%2d  ", v);
-        if ((i + 1) % 10 == 0)
-            printf("\n");
-        treeint_remove(v);
+    printf("Searching...\n");
+    for (int i = 0; i < node_num; ++i) {
+        int v = rand() % node_num;
+        interval("Searching Time", treeint_find(v);)
     }
-    printf("\n");
+
+    printf("Removing...\n");
+    for (int i = 0; i < node_num; ++i) {
+        int v = rand() % node_num;
+        interval("Remove Time", treeint_remove(v);)
+    }
 
     printf("[ After removals ]\n");
     treeint_dump();
 
     treeint_destroy();
+    gettimeofday(&end, NULL);
+    getrusage(RUSAGE_SELF, &ru);
+    printf("%s: %ldK\n", "ru_maxrss", ru.ru_maxrss);
+    printf("%.3g %.3g %.3g\n",
+           (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6,
+           ru.ru_utime.tv_sec + ru.ru_utime.tv_usec / 1e6,
+           ru.ru_stime.tv_sec + ru.ru_stime.tv_usec / 1e6);
 
     return 0;
 }
