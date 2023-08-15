@@ -2,6 +2,8 @@
 main
 qsort
 a.out
+test_linux
+test_pthread
 
 # perf
 perf.data*
