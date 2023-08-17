@@ -29,6 +29,7 @@ static inline void cond_init(cond_t *cond)
     atomic_init(&cond->seq, 0);
 }
 
+// 等待 cond 的訊號。收到後返回
 static inline void cond_wait(cond_t *cond, mutex_t *mutex)
 {
     int seq = load(&cond->seq, relaxed);
@@ -36,6 +37,7 @@ static inline void cond_wait(cond_t *cond, mutex_t *mutex)
     mutex_unlock(mutex);
 
 #define COND_SPINS 128
+    // 等待有人進入送 singal 或 boardcast，透過剛開始的 seq 去比對新取得的 seq，不一樣時代表有人執行 singal 或 boardcast
     for (int i = 0; i < COND_SPINS; ++i) {
         if (load(&cond->seq, relaxed) != seq) {
             mutex_lock(mutex);
@@ -52,6 +54,7 @@ static inline void cond_wait(cond_t *cond, mutex_t *mutex)
     fetch_or(&mutex->state, MUTEX_SLEEPING, relaxed);
 }
 
+// 將 seq + 1，並呼叫 wake
 static inline void cond_signal(cond_t *cond, mutex_t *mutex)
 {
     // TODO: BBBB
@@ -60,6 +63,7 @@ static inline void cond_signal(cond_t *cond, mutex_t *mutex)
     futex_wake(&cond->seq, 1);
 }
 
+// 將 seq + 1，並呼叫 requeue
 static inline void cond_broadcast(cond_t *cond, mutex_t *mutex)
 {
     // TODO: fetch_add(&cond->seq, CCCC, relaxed);

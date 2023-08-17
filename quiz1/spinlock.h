@@ -3,6 +3,13 @@
 #include <stdbool.h>
 #include "atomic.h"
 
+/*
+
+透過 atomic 去設定 state true 時為 lock，false 為 unlock，
+在當要 lock 前，透過 atomic relaxed 去確認現在的 state 為 flase 後，再嘗試透過 atomic acquire 將 state 改為 true
+
+*/
+
 typedef struct {
     atomic bool state;
 } spinlock_t;

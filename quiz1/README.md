@@ -10,3 +10,5 @@
 研讀〈並行程式設計: 建立相容於 POSIX Thread 的實作〉，在上述程式碼的基礎之上，實作 priority inheritance mutex 並確認與 glibc 實作行為相同，應有對應的 PI 測試程式碼
 比照 skinny-mutex，設計 POSIX Threads 風格的 API，並利用內附的 perf.c (斟酌修改) 確認執行模式符合預期，過程中也該比較 glibc 的 POSIX Threads 效能表現
 ```
+
+直接參考： [hackmd: 2023 Homework2 (quiz1)](https://hackmd.io/@zondatw/linux2023-summer-hw2)

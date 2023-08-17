@@ -37,6 +37,7 @@ static inline void mutex_init(mutex_t *mutex)
     atomic_init(&mutex->state, 0);
 }
 
+// 嘗試上鎖，首先會取得現在的狀態，如果是上鎖狀態返回 false，接著嘗試上鎖後，判斷狀態，如果不是上鎖，返回 false，接著設定 thread_fence 去防止指令重新排列
 static bool mutex_trylock(mutex_t *mutex)
 {
     int state = load(&mutex->state, relaxed);
@@ -51,6 +52,7 @@ static bool mutex_trylock(mutex_t *mutex)
     return true;
 }
 
+// 嘗試呼叫上鎖，在 128 內成功的話返回，不成功的話，嘗試將 state 變成 locked | sleeping，並不斷嘗試直到 state 直到變 locked，接著設定 thread_fence 去防止指令重新排列
 static inline void mutex_lock(mutex_t *mutex)
 {
 #define MUTEX_SPINS 128
@@ -70,6 +72,7 @@ static inline void mutex_lock(mutex_t *mutex)
     thread_fence(&mutex->state, acquire);
 }
 
+// 將狀態改成 0 ，假如還是 sleeping 狀態，呼叫 wake
 static inline void mutex_unlock(mutex_t *mutex)
 {
     int state = exchange(&mutex->state, 0, release);
