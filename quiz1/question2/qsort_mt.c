@@ -16,7 +16,7 @@
     } while (0)
 
 
-#define verifyOrig(x)                                                  \
+#define verifyorig(x)                                                  \
     do {                                                               \
         int e;                                                         \
         if ((e = x) != 0) {                                            \
@@ -187,7 +187,7 @@ f3:
             verify(cond_signal(&qs->cond_st, &qs->mtx_st));
             verify(mutex_unlock(&qs->mtx_st));
         }
-        verifyOrig(pthread_join(qs->id, NULL));
+        verifyorig(pthread_join(qs->id, NULL));
     }
     free(c.pool);
 f2:

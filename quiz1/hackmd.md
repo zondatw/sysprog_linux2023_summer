@@ -427,6 +427,32 @@ typedef struct {
  };
 ```
 
+修改 verify 程式，純粹是方便：
+
+```diff
++#define verify(x) \
++    do {          \
++        x;        \
++    } while (0)
++
++
++#define verifyorig(x)                                                  \
+     do {                                                               \
+         int e;                                                         \
+         if ((e = x) != 0) {                                            \
+@@ -86,26 +96,29 @@ enum thread_state {
+
+ /* Variant part passed to qsort invocations. */
+ struct qsort {
+-    enum thread_state st;   /* For coordinating work. */
+-    struct common *common;  /* Common shared elements. */
++
++#define verifyOrig(x)                                                  \
+     do {                                                               \
+         int e;                                                         \
+         if ((e = x) != 0) { 
+```
+
 修改 init 相關程式:
 
 ```diff
@@ -493,7 +519,7 @@ typedef struct {
 -        verify(pthread_join(qs->id, NULL));
 -        verify(pthread_mutex_destroy(&qs->mtx_st));
 -        verify(pthread_cond_destroy(&qs->cond_st));
-+        verifyOrig(pthread_join(qs->id, NULL));
++        verifyorig(pthread_join(qs->id, NULL));
      }
      free(c.pool);
  f2:
