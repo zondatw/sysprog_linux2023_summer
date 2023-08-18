@@ -379,14 +379,269 @@ typedef struct {
 
 > 修改第 1 次作業的測驗 γ 提供的並行版本快速排序法實作，使其得以搭配上述 futex 程式碼運作
 
-未更動前，執行時間為:
-```
-$ ./qsort -t
-1.88 3.36 0.00663
-$ ./qsort -lt
-2.2 2.2 0.00332
+直接套原本的程式去改來用;
+
+將原本的 pthread_mutex_t 和 pthread_cond_t，換成使用 mutex_t 和 cond_t
+
+```diff
+ /* Variant part passed to qsort invocations. */
+ struct qsort {
+-    enum thread_state st;   /* For coordinating work. */
+-    struct common *common;  /* Common shared elements. */
+-    void *a;                /* Array base. */
+-    size_t n;               /* Number of elements. */
+-    pthread_t id;           /* Thread id. */
+-    pthread_mutex_t mtx_st; /* For signalling state change. */
+-    pthread_cond_t cond_st; /* For signalling state change. */
++    enum thread_state st;  /* For coordinating work. */
++    struct common *common; /* Common shared elements. */
++    void *a;               /* Array base. */
++    size_t n;              /* Number of elements. */
++    pthread_t id;          /* Thread id. */
++    // pthread_mutex_t mtx_st; /* For signalling state change. */
++    // pthread_cond_t cond_st; /* For signalling state change. */
++    mutex_t mtx_st;
++    cond_t cond_st;
+ };
+ 
+  struct common {
+-    int swaptype;           /* Code to use for swapping */
+-    size_t es;              /* Element size. */
+-    void *thunk;            /* Thunk for qsort_r */
+-    cmp_t *cmp;             /* Comparison function */
+-    int nthreads;           /* Total number of pool threads. */
+-    int idlethreads;        /* Number of idle threads in pool. */
+-    int forkelem;           /* Minimum number of elements for a new thread. */
+-    struct qsort *pool;     /* Fixed pool of threads. */
+-    pthread_mutex_t mtx_al; /* For allocating threads in the pool. */
++    int swaptype;       /* Code to use for swapping */
++    size_t es;          /* Element size. */
++    void *thunk;        /* Thunk for qsort_r */
++    cmp_t *cmp;         /* Comparison function */
++    int nthreads;       /* Total number of pool threads. */
++    int idlethreads;    /* Number of idle threads in pool. */
++    int forkelem;       /* Minimum number of elements for a new thread. */
++    struct qsort *pool; /* Fixed pool of threads. */
++    // pthread_mutex_t mtx_al; /* For allocating threads in the pool. */
++    mutex_t mtx_al;
+ };
 ```
 
+修改 init 相關程式:
+
+```diff
+@@ -127,23 +140,16 @@ void qsort_mt(void *a,
+         goto f1;
+     errno = 0;
+     /* Try to initialize the resources we need. */
+-    if (pthread_mutex_init(&c.mtx_al, NULL) != 0)
+-        goto f1;
++    mutex_init(&c.mtx_al);
+     if ((c.pool = calloc(maxthreads, sizeof(struct qsort))) == NULL)
+         goto f2;
+     for (islot = 0; islot < maxthreads; islot++) {
+         qs = &c.pool[islot];
+-        if (pthread_mutex_init(&qs->mtx_st, NULL) != 0)
+-            goto f3;
+-        if (pthread_cond_init(&qs->cond_st, NULL) != 0) {
+-            verify(pthread_mutex_destroy(&qs->mtx_st));
+-            goto f3;
+-        }
++        mutex_init(&qs->mtx_st);
++        cond_init(&qs->cond_st);
+         qs->st = ts_idle;
+         qs->common = &c;
+         if (pthread_create(&qs->id, NULL, qsort_thread, qs) != 0) {
+-            verify(pthread_mutex_destroy(&qs->mtx_st));
+-            verify(pthread_cond_destroy(&qs->cond_st));
+             goto f3;
+         }
+     }
+```
+
+將 lock 和 signal 等功能都換掉
+
+```diff
+@@ -163,31 +169,28 @@ void qsort_mt(void *a,
+
+     /* Hand out the first work batch. */
+     qs = &c.pool[0];
+-    verify(pthread_mutex_lock(&qs->mtx_st));
++    verify(mutex_lock(&qs->mtx_st));
+     qs->a = a;
+     qs->n = n;
+     qs->st = ts_work;
+     c.idlethreads--;
+-    verify(pthread_cond_signal(&qs->cond_st));
+-    verify(pthread_mutex_unlock(&qs->mtx_st));
++    verify(cond_signal(&qs->cond_st, &qs->mtx_st));
++    verify(mutex_unlock(&qs->mtx_st));
+
+     /* Wait for all threads to finish, and free acquired resources. */
+ f3:
+     for (i = 0; i < islot; i++) {
+         qs = &c.pool[i];
+         if (bailout) {
+-            verify(pthread_mutex_lock(&qs->mtx_st));
++            verify(mutex_lock(&qs->mtx_st));
+             qs->st = ts_term;
+-            verify(pthread_cond_signal(&qs->cond_st));
+-            verify(pthread_mutex_unlock(&qs->mtx_st));
++            verify(cond_signal(&qs->cond_st, &qs->mtx_st));
++            verify(mutex_unlock(&qs->mtx_st));
+         }
+-        verify(pthread_join(qs->id, NULL));
+-        verify(pthread_mutex_destroy(&qs->mtx_st));
+-        verify(pthread_cond_destroy(&qs->cond_st));
++        verifyOrig(pthread_join(qs->id, NULL));
+     }
+     free(c.pool);
+ f2:
+-    verify(pthread_mutex_destroy(&c.mtx_al));
+     if (bailout) {
+         fprintf(stderr, "Resource initialization failed; bailing out.\n");
+     f1:
+@@ -204,16 +207,16 @@ f2:
+  */
+ static struct qsort *allocate_thread(struct common *c)
+ {
+-    verify(pthread_mutex_lock(&c->mtx_al));
++    verify(mutex_lock(&c->mtx_al));
+     for (int i = 0; i < c->nthreads; i++)
+         if (c->pool[i].st == ts_idle) {
+             c->idlethreads--;
++            verify(mutex_lock(&c->pool[i].mtx_st));
+             c->pool[i].st = ts_work;
+-            verify(pthread_mutex_lock(&c->pool[i].mtx_st));
+-            verify(pthread_mutex_unlock(&c->mtx_al));
++            verify(mutex_unlock(&c->mtx_al));
+             return (&c->pool[i]);
+         }
+-    verify(pthread_mutex_unlock(&c->mtx_al));
++    verify(mutex_unlock(&c->mtx_al));
+     return (NULL);
+ }
+
+@@ -314,8 +317,8 @@ nevermind:
+         (qs2 = allocate_thread(c)) != NULL) {
+         qs2->a = a;
+         qs2->n = nl;
+-        verify(pthread_cond_signal(&qs2->cond_st));
+-        verify(pthread_mutex_unlock(&qs2->mtx_st));
++        verify(cond_signal(&qs2->cond_st, &qs2->mtx_st));
++        verify(mutex_unlock(&qs2->mtx_st));
+     } else if (nl > 0) {
+         qs->a = a;
+         qs->n = nl;
+@@ -339,10 +342,10 @@ static void *qsort_thread(void *p)
+     c = qs->common;
+ again:
+     /* Wait for work to be allocated. */
+-    verify(pthread_mutex_lock(&qs->mtx_st));
++    verify(mutex_lock(&qs->mtx_st));
+     while (qs->st == ts_idle)
+-        verify(pthread_cond_wait(&qs->cond_st, &qs->mtx_st));
+-    verify(pthread_mutex_unlock(&qs->mtx_st));
++        verify(cond_wait(&qs->cond_st, &qs->mtx_st));
++    verify(mutex_unlock(&qs->mtx_st));
+     if (qs->st == ts_term) {
+         return NULL;
+     }
+@@ -350,7 +353,7 @@ again:
+
+     qsort_algo(qs);
+
+-    verify(pthread_mutex_lock(&c->mtx_al));
++    verify(mutex_lock(&c->mtx_al));
+     qs->st = ts_idle;
+     c->idlethreads++;
+     if (c->idlethreads == c->nthreads) {
+@@ -358,15 +361,15 @@ again:
+             qs2 = &c->pool[i];
+             if (qs2 == qs)
+                 continue;
+-            verify(pthread_mutex_lock(&qs2->mtx_st));
++            verify(mutex_lock(&qs2->mtx_st));
+             qs2->st = ts_term;
+-            verify(pthread_cond_signal(&qs2->cond_st));
++        verify(cond_wait(&qs->cond_st, &qs->mtx_st));
++    verify(mutex_unlock(&qs->mtx_st));
+     if (qs->st == ts_term) {
+         return NULL;
+     }
+@@ -350,7 +353,7 @@ again:
+
+     qsort_algo(qs);
+
+-    verify(pthread_mutex_lock(&c->mtx_al));
++    verify(mutex_lock(&c->mtx_al));
+     qs->st = ts_idle;
+     c->idlethreads++;
+     if (c->idlethreads == c->nthreads) {
+@@ -358,15 +361,15 @@ again:
+             qs2 = &c->pool[i];
+             if (qs2 == qs)
+                 continue;
+-            verify(pthread_mutex_lock(&qs2->mtx_st));
++            verify(mutex_lock(&qs2->mtx_st));
+             qs2->st = ts_term;
+-            verify(pthread_cond_signal(&qs2->cond_st));
+-            verify(pthread_mutex_unlock(&qs2->mtx_st));
++            verify(cond_signal(&qs2->cond_st, &qs2->mtx_st));
++            verify(mutex_unlock(&qs2->mtx_st));
+         }
+-        verify(pthread_mutex_unlock(&c->mtx_al));
++        verify(mutex_unlock(&c->mtx_al));
+         return NULL;
+     }
+-    verify(pthread_mutex_unlock(&c->mtx_al));
++    verify(mutex_unlock(&c->mtx_al));
+     goto again;
+ }
+```
+
+build code
+
+```just
+original_source_code := "qsort_mt_orig.c"
+source_code := "qsort_mt.c"
+original_exe := "qsort"
+exe := "qsort_futex"
+cflags := "-Wall -g -O2 -D_GNU_SOURCE -fsanitize=thread -lpthread"
+
+@build:
+    gcc -o {{original_exe}} {{original_source_code}} {{cflags}}
+    gcc -o {{exe}} {{source_code}} {{cflags}}
+```
+
+測試：
+
+```
+$ ./qsort -t
+15.9 30.5 0.0897
+$ ./qsort_futex -t
+15.8 30.4 0.0732
+```
+
+測試加上 `time` 和 verify
+
+```
+$ time ./qsort -tv
+15.9 30.4 0.0697
+
+real    0m16.227s
+user    0m30.748s
+sys     0m0.077s
+
+$ time ./qsort_futex -tv
+15.9 30.4 0.0629
+
+real    0m16.213s
+user    0m30.740s
+sys     0m0.070s
+```
+
+futex 版本有快一點點
 
 ## 測驗 1 - 3 
 > 研讀〈並行程式設計: 建立相容於 POSIX Thread 的實作〉，在上述程式碼的基礎之上，實作 priority inheritance mutex 並確認與 glibc 實作行為相同，應有對應的 PI 測試程式碼
