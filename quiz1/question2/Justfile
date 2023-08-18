@@ -1,9 +1,13 @@
 
+original_source_code := "qsort_mt_orig.c"
 source_code := "qsort_mt.c"
-exe := "qsort"
+original_exe := "qsort"
+exe := "qsort_futex"
+cflags := "-Wall -g -O2 -D_GNU_SOURCE -fsanitize=thread -lpthread"
 
 @build:
-    gcc -Wall -o {{exe}} {{source_code}} -lpthread
+    gcc -o {{original_exe}} {{original_source_code}} {{cflags}}
+    gcc -o {{exe}} {{source_code}} {{cflags}}
 
 @thread-sanitizer:
     clang {{source_code}} -fsanitize=thread -fPIE -pie -g -o {{exe}}
