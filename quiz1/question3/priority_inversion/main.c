@@ -52,7 +52,7 @@ static void *thread_mid_func(void *ptr)
     struct context *ctx = ptr;
     mutex_lock(&ctx->mutex);
     printf("Thread mid func: ready to sleep\n");
-    usleep(2000);  // 0.001s
+    usleep(1000);  // 0.001s
     fetch_sub(&share_resource, 1, relaxed);
     int val = load(&share_resource, relaxed);
     printf("Thread mid func: execution [%d]\n", val);
