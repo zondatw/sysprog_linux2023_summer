@@ -40,7 +40,7 @@ static void *thread_low_func(void *ptr)
     struct context *ctx = ptr;
     mutex_lock(&ctx->mutex);
     printf("Thread low func: ready to sleep\n");
-    usleep(1000 * 1000);  // 1s
+    usleep(50 * 1000);  // 0.05s
     int val = load(&share_resource, relaxed);
     printf("Thread low func: execution [%d]\n", val);
     mutex_unlock(&ctx->mutex);
