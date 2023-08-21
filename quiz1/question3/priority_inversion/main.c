@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "atomic.h"
 #include "cond.h"
+#include "futex.h"
 #include "mutex.h"
 
 
@@ -37,10 +39,11 @@ static void context_init(struct context *ctx)
 
 static void *thread_low_func(void *ptr)
 {
+    printf("Thread low func\n");
     struct context *ctx = ptr;
     mutex_lock(&ctx->mutex);
     printf("Thread low func: ready to sleep\n");
-    usleep(50 * 1000);  // 0.05s
+    usleep(100 * 1000);
     int val = load(&share_resource, relaxed);
     printf("Thread low func: execution [%d]\n", val);
     mutex_unlock(&ctx->mutex);
@@ -49,10 +52,13 @@ static void *thread_low_func(void *ptr)
 
 static void *thread_mid_func(void *ptr)
 {
+    printf("Thread mid func\n");
     struct context *ctx = ptr;
     mutex_lock(&ctx->mutex);
     printf("Thread mid func: ready to sleep\n");
-    usleep(1000);  // 0.001s
+    while (load(&share_resource, relaxed) == 0)
+        ;
+    printf("Thread mid func: ready to sub\n");
     fetch_sub(&share_resource, 1, relaxed);
     int val = load(&share_resource, relaxed);
     printf("Thread mid func: execution [%d]\n", val);
@@ -62,10 +68,11 @@ static void *thread_mid_func(void *ptr)
 
 static void *thread_high_func(void *ptr)
 {
+    printf("Thread high func\n");
     struct context *ctx = ptr;
     mutex_lock(&ctx->mutex);
     printf("Thread high func: ready to sleep\n");
-    usleep(1000);  // 0.001s
+    usleep(500 * 1000);
     fetch_add(&share_resource, 1, relaxed);
     int val = load(&share_resource, relaxed);
     printf("Thread high func: execution [%d]\n", val);
@@ -124,6 +131,9 @@ int main(void)
                                           PRIORITY_MID));
     ERROR_HANDLER(pthread_create_priority(&high_t, &attr, thread_high_func,
                                           &ctx, PRIORITY_HIGH));
+
+    usleep(10 * 1000);
+    fetch_add(&share_resource, 1, relaxed);
 
     // execute until finished
     ERROR_HANDLER(pthread_join(low_t, NULL));

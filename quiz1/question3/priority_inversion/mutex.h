@@ -3,9 +3,24 @@
 #if USE_PTHREADS
 
 #include <pthread.h>
+#include <stdio.h>
 
 #define mutex_t pthread_mutex_t
+
+#if FIX_PI
+
+static inline void mutex_init(mutex_t *m) {
+    // reference: https://www.embedded.com/effective-use-of-pthreads-in-embedded-linux-designs-part-2-sharing-resources/
+    printf("pthread mutex\n");
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+    pthread_mutex_init(m, &attr);
+}
+
+# else
 #define mutex_init(m) pthread_mutex_init(m, NULL)
+# endif
+
 #define MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
 #define mutex_trylock(m) (!pthread_mutex_trylock(m))
 #define mutex_lock pthread_mutex_lock
@@ -17,6 +32,7 @@
 #include "atomic.h"
 #include "futex.h"
 #include "spinlock.h"
+#include <stdio.h>
 
 
 /*
@@ -39,6 +55,7 @@ enum {
 
 static inline void mutex_init(mutex_t *mutex)
 {
+    printf("customer mutex\n");
     atomic_init(&mutex->state, 0);
 }
 
