@@ -15,24 +15,34 @@ SCHED_DEADLINE min/max priority : 0/0
 
 ## 執行
 
-執行結果每次都是低優先權的先執行完畢：
-
 ```shell
 $ make check
-cc -std=c11 -Wall -g -O2 -D_GNU_SOURCE -fsanitize=thread main.c -o test_pthread -lpthread
+cc -std=c11 -Wall -g -O2 -D_GNU_SOURCE -fsanitize=thread -DUSE_PTHREADS main.c -o test_pthread -lpthread
+cc -std=c11 -Wall -g -O2 -D_GNU_SOURCE -fsanitize=thread -DUSE_PTHREADS -DFIX_PI main.c -o test_pthread_fix_pi -lpthread
 Running test_pthread ...
+Thread low func
 Thread low func: ready to sleep
+Thread mid func
 Thread mid func: ready to sleep
-Thread mid func: execution [-1]
-Thread low func: execution [-1]
+Thread high func
+Thread mid func: ready to sub
+Thread mid func: execution [0]
+Thread low func: execution [0]
 Thread high func: ready to sleep
-Thread high func: execution [0]
+Thread high func: execution [1]
 [OK]
-```
-
-執行測試，結果出現每次都發生 priority inversion：
-
-```shell
-$ sudo python test.py
-100 / 100 = 1.0
+Running test_pthread_fix_pi ...
+pthread mutex: PTHREAD_PRIO_INHERIT
+pthread mutex: PTHREAD_PRIO_INHERIT
+Thread low func
+Thread low func: ready to sleep
+Thread mid func
+Thread mid func: ready to sleep
+Thread high func
+Thread low func: execution [0]
+Thread high func: ready to sleep
+Thread high func: execution [1]
+Thread mid func: ready to sub
+Thread mid func: execution [0]
+[OK]
 ```

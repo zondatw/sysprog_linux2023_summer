@@ -11,7 +11,7 @@
 
 static inline void mutex_init(mutex_t *m) {
     // reference: https://www.embedded.com/effective-use-of-pthreads-in-embedded-linux-designs-part-2-sharing-resources/
-    printf("pthread mutex\n");
+    printf("pthread mutex: PTHREAD_PRIO_INHERIT\n");
     pthread_mutexattr_t attr;
     pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
     pthread_mutex_init(m, &attr);
