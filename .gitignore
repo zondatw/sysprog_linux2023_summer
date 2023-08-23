@@ -4,6 +4,7 @@ qsort
 a.out
 test_linux
 test_pthread
+work-steal
 
 # perf
 perf.data*
