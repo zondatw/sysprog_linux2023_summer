@@ -60,6 +60,9 @@ typedef struct {
     _Atomic(array_t *) array;
 } deque_t;
 
+
+// 初始化 deque ， top 和 bottom 指標先指到 0，array 大小為 sizeof(array_t) +
+// sizeof(work_t *) * size_hint
 void init(deque_t *q, int size_hint)
 {
     atomic_init(&q->top, 0);
@@ -69,6 +72,7 @@ void init(deque_t *q, int size_hint)
     atomic_init(&q->array, a);
 }
 
+// 分配新的兩倍大小的 array ，並把資料都依據原本的 index 搬過去
 void resize(deque_t *q)
 {
     array_t *a = atomic_load_explicit(&q->array, memory_order_relaxed);
@@ -98,6 +102,9 @@ void resize(deque_t *q)
      */
 }
 
+// 當 top <= bottom - 1 時，從 bottom - 1 index 取得 work，當 top == bottom - 1
+// 時，將 top + 1 ，原因是要讓新的 work 放在空的位置上，接著將 bottom -1 再 +1
+// 儲存起來; 如果 top > bottom - 1 時，回傳 empty 並把 bottom - 1 + 1 儲存起來
 work_t *take(deque_t *q)
 {
     size_t b = atomic_load_explicit(&q->bottom, memory_order_relaxed) - 1;
@@ -130,6 +137,7 @@ work_t *take(deque_t *q)
     return x;
 }
 
+// 新增 work 到 queue 中，並將 bottom + 1
 void push(deque_t *q, work_t *w)
 {
     size_t b = atomic_load_explicit(&q->bottom, memory_order_relaxed);
@@ -145,6 +153,7 @@ void push(deque_t *q, work_t *w)
     atomic_store_explicit(&q->bottom, b + 1, memory_order_relaxed);
 }
 
+// 從 queue 的 top index 取走 work，並將 top + 1
 work_t *steal(deque_t *q)
 {
     size_t t = atomic_load_explicit(&q->top, memory_order_acquire);
@@ -197,6 +206,8 @@ work_t *join_work(work_t *work)
     return NULL;
 }
 
+// 從自己的 queue 中取得 work 並執行，如果沒有 work ，嘗試從別人的 queue 取得
+// work，如果也沒有 work 了，則將 done 變為 true，並結束 thread
 void *thread(void *payload)
 {
     int id = *(int *) payload;
