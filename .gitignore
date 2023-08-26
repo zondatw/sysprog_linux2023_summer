@@ -5,6 +5,7 @@ a.out
 test_linux
 test_pthread
 work-steal
+mpmc
 
 # perf
 perf.data*
